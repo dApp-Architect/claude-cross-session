@@ -34,8 +34,28 @@ set -u
 DIR="${CS_DIR:-.claude/cross-session}"
 WINDOW="${CONTEXT_WINDOW:-1000000}"
 
+# ⛔ `python` IS NOT A COMMAND ON macOS OR MODERN LINUX — those ship python3 only, and
+# the bare name was removed rather than aliased. Resolve it once, and say so plainly if absent.
+# ⛔ RESOLVING THE NAME IS NOT ENOUGH. On Windows, `python3` resolves to a Microsoft
+# Store stub that is not an interpreter: it prints an ad and exits non-zero. Probe each
+# candidate by RUNNING it, and take the first that actually executes.
+PY=""
+for _cand in python3 python py; do
+  command -v "$_cand" >/dev/null 2>&1 || continue
+  "$_cand" -c "import sys" >/dev/null 2>&1 || continue
+  PY="$_cand"; break
+done
+if [ -z "$PY" ]; then
+  echo "cs-context needs python3 on PATH (it parses the transcript JSON). Nothing else does." >&2
+  exit 1
+fi
+
 resolve() {                      # /c/x -> C:/x  (Git Bash path -> Windows path)
-  printf '%s' "$1" | sed -E 's#^/([a-zA-Z])/#\U\1:/#'
+  # ⛔ sed's \U (uppercase) is GNU-only and emits a literal U on BSD/macOS. tr is everywhere.
+  case "$1" in
+    /?/*) printf '%s:%s' "$(printf '%s' "$1" | cut -c2 | tr 'a-z' 'A-Z')" "${1#/?}" ;;
+    *)    printf '%s' "$1" ;;
+  esac
 }
 
 report() {
@@ -46,7 +66,7 @@ report() {
     return 1
   fi
   [ -f "$win" ] || win="$path"
-  WIN="$win" WINDOW="$WINDOW" LABEL="$label" python -c '
+  WIN="$win" WINDOW="$WINDOW" LABEL="$label" "$PY" -c '
 import json, os
 p = os.environ["WIN"]; window = int(os.environ["WINDOW"]); label = os.environ["LABEL"]
 last = None; turns = 0

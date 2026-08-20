@@ -9,7 +9,7 @@
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WORK="$(mktemp -d)"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/cs-selftest.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 export CS_DIR="$WORK/msgs"
 export CS_POLL=1

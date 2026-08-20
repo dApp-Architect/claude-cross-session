@@ -25,12 +25,16 @@ REPORT_MIN="${CS_REPORT_MIN:-25}"   # partner busy but not reporting -> alert
 REALERT_MIN="${CS_REALERT_MIN:-30}" # minimum gap between repeat alerts
 
 mkdir -p "$DIR"
-SEEN="$(mktemp)"; NEW="$(mktemp)"
+# ⛔ BSD/macOS mktemp REQUIRES a template; only GNU defaults one. Supply it explicitly.
+SEEN="$(mktemp "${TMPDIR:-/tmp}/cs-watch.XXXXXX")"; NEW="$(mktemp "${TMPDIR:-/tmp}/cs-watch.XXXXXX")"
 trap 'rm -f "$SEEN" "$NEW"' EXIT
 
 list_msgs() { ls -1 "$DIR"/${PARTNER}_*.md 2>/dev/null | sort; }
 now() { date +%s; }
-mtime() { stat -c %Y "$1" 2>/dev/null || echo 0; }
+# ⛔ stat(1) IS NOT PORTABLE. GNU takes -c %Y, BSD/macOS takes -f %m. Try GNU, fall back
+# to BSD, and only then give up — bare `stat -c` fails on macOS for EVERY file, so mtime
+# would return 0 ("modified in 1970") and the INACTIVE alert would fire forever.
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null || echo 0; }
 
 # Newest message from EITHER side. The "not reporting" clock must measure time since
 # THE BALL WAS PASSED, not time since the partner last spoke — otherwise sending a message
@@ -55,6 +59,26 @@ if [ "$pending" -gt 0 ]; then
 else
   echo "WATCHER ARMED for ${PARTNER}_*.md in ${DIR} — none pending, waiting."
 fi
+
+# ⛔ STATE WHICH LEGS ARE LIVE, RATHER THAN LETTING "ARMED" IMPLY ALL OF THEM.
+# The watchdog needs the partner's transcript path, and only cs-register.sh writes it.
+# Without it the loop below hits `[ -n "$LOG" ] || continue` every iteration and does
+# NOTHING — no alert, no warning, forever. Printing ARMED while a headline feature is
+# silently dead is the SAME defect this bus exists to replace: reports success, delivers
+# nothing. Messaging does not depend on registration; the watchdog and cs-context.sh do.
+if [ -n "$PARTNER_LOG" ] || [ -f "$DIR/.${PARTNER}.transcript" ]; then
+  watchdog_on=1
+  echo "   watchdog: ON — partner transcript known; stalls and silent divergence will be reported."
+else
+  watchdog_on=0
+  echo "   watchdog: OFF — ${PARTNER} is not registered, so a stall will NOT be reported."
+  echo "   Messaging still works. To switch it on, the PARTNER runs: bash scripts/cs-register.sh ${PARTNER} selfid-<unique>"
+fi
+# ⛔ THAT LINE IS A SNAPSHOT, AND THE COMMON CASE INVALIDATES IT: both sessions usually start
+# together, so A arms BEFORE B registers and prints OFF — then the loop below re-resolves the
+# path every iteration and the watchdog quietly starts working. The user would be told a LIVE
+# feature is dead: the same silent mismatch this block exists to end, inverted. So the loop
+# announces the flip.
 
 last_msg_ts=$(now)
 last_quiet_alert=0
@@ -105,6 +129,17 @@ while true; do
   # still picked up.
   LOG="$PARTNER_LOG"
   [ -n "$LOG" ] || LOG=$(cat "$DIR/.${PARTNER}.transcript" 2>/dev/null || true)
+
+  # Announce a change of state in EITHER direction. A watchdog whose real state has
+  # silently diverged from what it told you is worse than one that is simply off.
+  if [ -n "$LOG" ] && [ "$watchdog_on" = 0 ]; then
+    watchdog_on=1
+    echo "   watchdog: now ON — ${PARTNER} registered after this watcher was armed."
+  elif [ -z "$LOG" ] && [ "$watchdog_on" = 1 ]; then
+    watchdog_on=0
+    echo "   watchdog: now OFF — ${PARTNER}'s registration disappeared; stalls will NOT be reported."
+  fi
+
   [ -n "$LOG" ] || continue
   t=$(now)
 

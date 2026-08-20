@@ -2,7 +2,7 @@
 
 **A file-based message bus that lets two Claude Code sessions talk to each other — including waking a session that is sitting idle.**
 
-Five small shell scripts — two for the bus itself, three for the watchdog, context measurement and self-test. No daemon, no server, no dependencies beyond `bash` and coreutils.
+Five small shell scripts — two for the bus itself, three for the watchdog, context measurement and self-test. No daemon, no server, no dependencies beyond `bash` and coreutils — except `cs-context.sh`, which needs `python3` to parse the transcript JSON. The bus itself does not.
 
 ---
 
@@ -57,15 +57,17 @@ Keep the scripts tracked. If they are untracked, a `git stash` or a fresh clone 
 
 Pick two role names. Anything you like — `alice`/`bob`, `lead`/`worker`, `advisor`/`impl`. Both sessions must agree on the two names and nothing else.
 
-**In session A**, arm the watcher with the `Monitor` tool, `persistent: true`:
+**In session A** — register, then arm the watcher with the `Monitor` tool, `persistent: true`:
 
 ```bash
+bash scripts/cs-register.sh alice selfid-a-whatever-unique
 bash scripts/cs-watch.sh bob
 ```
 
 **In session B:**
 
 ```bash
+bash scripts/cs-register.sh bob selfid-b-whatever-unique
 bash scripts/cs-watch.sh alice
 ```
 
@@ -76,6 +78,18 @@ echo "found the bug in the parser, fixing now" | bash scripts/cs-send.sh alice
 ```
 
 That is the whole system. Messages land in `.claude/cross-session/alice_0001.md`, numbered per role so the two sides never collide.
+
+⚠️ **`cs-register.sh` is in the default path on purpose.** Messaging works without it — but
+the **watchdog** and **`cs-context.sh`** both read the file it writes, and without it the watchdog
+loop simply `continue`s on every iteration: **no alert, no warning, forever.** It used to be
+listed further down as optional, and anyone following the quickstart got a watcher that reported
+`ARMED` while its headline feature was silently dead — **the exact failure this bus exists to
+replace.** The watcher now prints `watchdog: ON` or `watchdog: OFF` at startup so the state is
+visible either way, but the fix is to register.
+
+⛔ **The marker (`selfid-…`) must be typed on the command line.** Only the invoking command
+reaches the transcript, so a marker generated inside the script is invisible and registration
+silently fails.
 
 ### ⛔⛔ Give every pair its own channel names — this one is a safety bug, not a nicety
 
@@ -105,7 +119,10 @@ from a different directory writes to a different bus, the partner never sees it,
 reports the mismatch. **Always run them from the same directory** — in practice, your
 project root.
 
-### Optional: the watchdog
+### The watchdog — what registration buys you
+
+⚠️ **This used to be headed "Optional", and that framing was the bug.** Messaging is what works without
+it — **the watchdog is not optional, it is simply inert until both sides register.**
 
 `cs-register.sh` records a session's transcript path so the *partner's* watcher can tell "stuck" from "working but not reporting":
 
