@@ -1,0 +1,5 @@
+# Messages are chatter, not source. The SCRIPTS are tracked; the traffic is not.
+.claude/cross-session/
+
+# Scratch from the self-test
+/tmp-selftest/
