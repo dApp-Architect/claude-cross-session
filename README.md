@@ -2,7 +2,7 @@
 
 **A file-based message bus that lets two Claude Code sessions talk to each other — including waking a session that is sitting idle.**
 
-Three small shell scripts. No daemon, no server, no dependencies beyond `bash` and coreutils.
+Five small shell scripts — two for the bus itself, three for the watchdog, context measurement and self-test. No daemon, no server, no dependencies beyond `bash` and coreutils.
 
 ---
 
@@ -233,6 +233,26 @@ All optional, via environment variables:
 ## Templates
 
 `templates/` has a block to paste into your `CLAUDE.md` and two starter prompts. The starter prompts are deliberately almost empty: **the only thing a starter prompt must do is assign the role**, because the instruction file cannot know which window is which. Everything else belongs in `CLAUDE.md`, where it survives.
+
+---
+
+## Support
+
+This is free and MIT-licensed. If it saved you an afternoon and you feel like saying thanks, a tip is welcome — it buys you nothing except my gratitude.
+
+**EVM** — Ethereum, Base, Arbitrum, Optimism, Polygon, or any EVM chain:
+
+```
+0x0D6A146753189CAbF46f42a77bBfad880B6f517e
+```
+
+**Solana:**
+
+```
+A4i6a89HXcaFrXRQ1JZUrmdFYL5cnZqyryqo357KuEbp
+```
+
+Send only on the network listed above the address. Anything sent on a chain the address does not support is unrecoverable.
 
 ---
 
