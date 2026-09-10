@@ -19,6 +19,20 @@
 # ⛔ AND DO NOT SUBSTITUTE "the most recently modified transcript". With two sessions running
 # in one project the partner's file is frequently the newest, so that heuristic returns the
 # WRONG file exactly when both sessions are active — which is the only time this matters.
+# ⛔⛔⛔ REGISTER ONLY THE CHANNEL YOU *SEND* ON. NEVER THE ONE YOU READ.
+# This is a SAFETY BUG, not a style note, and it does not fail loudly.
+# Registration points a channel at whoever runs this script. Register the channel you only
+# READ and you have aimed your PARTNER'S stall alarm at YOURSELF: their watchdog then reports
+# on your transcript instead of theirs, so a genuinely stuck partner reads as healthy and your
+# own quiet reads as a stall. Nothing errors and nothing warns.
+#   correct:   alice runs   cs-register.sh alice ...    and WATCHES bob
+#   wrong:     alice runs   cs-register.sh bob   ...    <- silently breaks both watchdogs
+# Measured 2026-09-09: one session did this and its own alarm watched it for a whole shift.
+#
+# ⚠️ AND RE-RUN THIS AFTER ANY `cd`. A `cd` inside a tool call can change the working
+# directory the bus resolves against, which leaves the pointer written somewhere the partner
+# never looks. Two sessions hit this during a deploy that cd'd into a subdirectory.
+#
 set -u
 
 DIR="${CS_DIR:-.claude/cross-session}"

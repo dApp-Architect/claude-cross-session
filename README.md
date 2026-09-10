@@ -119,6 +119,28 @@ from a different directory writes to a different bus, the partner never sees it,
 reports the mismatch. **Always run them from the same directory** — in practice, your
 project root.
 
+### ⛔⛔ Register ONLY the channel you SEND on — this one is a safety bug too
+
+`cs-register.sh` points a channel at whoever runs it. **Register the channel you only READ and you
+have aimed your partner's stall alarm at yourself.** Their watchdog then measures your transcript
+instead of theirs, so:
+
+- a genuinely stuck partner reads as **healthy**, and
+- your own normal quiet reads as a **stall**.
+
+**Nothing errors. Nothing warns.** One session here did this and its own alarm watched it for an
+entire shift before anyone noticed.
+
+```bash
+# alice sends on 'alice' and watches 'bob'
+scripts/cs-register.sh alice selfid-a7f3c1     # ✅ the channel she SENDS on
+scripts/cs-register.sh bob   selfid-a7f3c1     # ⛔ silently breaks BOTH watchdogs
+```
+
+⚠️ **And re-run it after any `cd`.** A `cd` inside a tool call can change the directory the bus
+resolves against, leaving the pointer somewhere the partner never looks. Two sessions hit this
+during a deploy that cd'd into a subdirectory.
+
 ### The watchdog — what registration buys you
 
 ⚠️ **This used to be headed "Optional", and that framing was the bug.** Messaging is what works without
@@ -201,23 +223,82 @@ Measured, roughly, per exchanged message:
 
 ## Limitations — read these before relying on it
 
-1. **The watcher is per-session and dies with the session, silently.** Every new session must re-arm it. Put the arming commands in the instruction file both sessions read at startup (`CLAUDE.md`), never in a prompt you paste by hand — a rule that lives in a chat message dies at the next handoff.
-2. **On a re-arm, the whole inbox replays** as "already present". That is deliberate: hiding genuinely unread mail from a fresh session is worse than replaying an answered one. Check the highest number you have already answered before acting.
-3. **A watchdog alert cannot tell an ordered silence from a stall.** That is what `.quiet` is for, and it is still your judgement.
-4. **Polling, not events.** `inotifywait` is not available everywhere (notably Git Bash on Windows), so this polls. Detection is within `CS_POLL` seconds, default 2.
-5. **Writes are atomic** (`.tmp` then rename) so a half-written file is never observed. Do not replace `cs-send.sh` with a plain redirect.
-6. **Declaring done is not being done — archive the sessions.** A session that has written its
+1. **The watcher can die MID-SESSION, and the notice reads as housekeeping.** If your Monitor task
+   reports that `cs-watch.sh` exited — e.g. *"script failed (exit 4)"* — **that is not a
+   notification, it is the loss of your only sense. Re-arm at once, before anything else.**
+   It is not that the signal is missing: it is delivered, and it is discarded, because it carries no
+   error text and arrives down the same channel as the watchdog ticks you have been correctly
+   dismissing all shift. Measured five times in two days; three sessions received it and replied
+   "no response required". **Skipping any other alarm costs you nothing; skipping this one costs you
+   every future alarm**, because the thing that would deliver the next one is what just died.
+   ⛔ Instructions that say *"read nothing else"* or *"stay stopped"* must carve this out.
+2. **The watcher is per-session and dies with the session, silently.** Every new session must re-arm it. Put the arming commands in the instruction file both sessions read at startup (`CLAUDE.md`), never in a prompt you paste by hand — a rule that lives in a chat message dies at the next handoff.
+3. **On a re-arm, the whole inbox replays** as "already present". That is deliberate: hiding genuinely unread mail from a fresh session is worse than replaying an answered one. Check the highest number you have already answered before acting.
+4. **A watchdog alert cannot tell an ordered silence from a stall.** That is what `.quiet` is for, and it is still your judgement.
+5. **Polling, not events.** `inotifywait` is not available everywhere (notably Git Bash on Windows), so this polls. Detection is within `CS_POLL` seconds, default 2.
+6. **Writes are atomic** (`.tmp` then rename) so a half-written file is never observed. Do not replace `cs-send.sh` with a plain redirect.
+7. **Declaring done is not being done — archive the sessions.** A session that has written its
    handoff, said it is finished and gone quiet is **still armed**: the watcher runs inside the
    session process. From outside, a quiet session and a stopped session are indistinguishable,
    and the quiet one still wakes on anything written to its channel. **Archive both sessions and
    confirm `isRunning: false` — that flag is the only proof.** Skipping this is half of the
    two-pairs collision above; unstamped channel names are the other half.
 
-7. **Clear with `rm *.md`, never `rm -rf` the folder.** The dotfiles must survive: `.<role>.seq` holds the message counter and `.<role>.transcript` holds the watchdog pointer.
+8. **Clear with `rm *.md`, never `rm -rf` the folder.** The dotfiles must survive: `.<role>.seq` holds the message counter and `.<role>.transcript` holds the watchdog pointer.
 
    ⛔ **Why the counter is persisted rather than derived from the listing** — and this is worth reading even if you never clear the folder. If numbering comes only from the files present, clearing resets it to `0001` and **recycles filenames**. A recycled name that is still in a running watcher's seen-set produces no diff, and the watcher reconciles its state anyway, so **the message is swallowed silently — not delayed, gone, with no error anywhere.**
 
    ⭐ The sharp part: **clearing is normal housekeeping**, the kind of thing a tidy-up step recommends. The routine maintenance degraded the transport, and nothing in either script said so. `cs-selftest.sh` now has a regression check for it.
+
+---
+
+## Handing over to a successor — the two rules that have no mechanism by default
+
+Both of these were learned the expensive way. Neither is enforced by the scripts, so they have to
+live here.
+
+### 1. A registration is not a pulse. Check the transcript's AGE before you rely on a standby.
+
+A common pattern is to start a successor session early, have it arm a watcher, and leave it idle so
+its context is fresh when it is promoted. **`cs-register.sh` will happily record a pointer for a
+session that is no longer listening**, and the pointer looks perfectly healthy.
+
+One promotion here went to a standby whose transcript **had not moved in 21 hours**. Its watcher had
+died hours earlier; the promotion sat unread for half an hour while the outgoing session waited.
+
+```bash
+# before you plan a retirement around a standby:
+stat -c '%y' "$(cat .claude/cross-session/.<successor>.transcript)"
+```
+
+**Minutes means alive. Hours means you are about to hand over to nobody.** A standby that armed and
+read nothing writes no turns, so silence is normal for it and tells you nothing either way — which
+is exactly why the age, and then the ACK, are the only tests.
+
+### 2. Route the ACK, or the retiring session cannot hear it.
+
+The rule everyone writes down is *"never retire on the send — retire on the ACK."* It is correct,
+and **by default it has no mechanism**:
+
+- each session watches its **partner's** channel;
+- the successor naturally ACKs on the channel the retiring session **sends** on;
+- **nobody watches their own outbox.**
+
+⇒ **A retiring session is structurally deaf to its own ACK.** Measured 2026-09-10: a session
+promoted its successor, held for the ACK exactly as instructed, and did not see it for 23 minutes —
+and kept working *and sending* meanwhile, so the partner briefly had two sessions issuing
+instructions on one channel. That is the collision the rule exists to prevent, produced by the rule.
+
+**The fix is one line in the promotion message:**
+
+> ACK on `<predecessor's own inbox channel>` — the channel the retiring session is already watching.
+> **Not** on the shared send channel, which it cannot see.
+
+(The alternative — the retiring session arms a second watcher on its own send channel for the
+duration — also works and costs a watcher. Naming the inbox costs nothing.)
+
+⭐ **The general form, worth more than the instance: a rule that names a signal it has not routed is
+not a control.**
 
 ---
 

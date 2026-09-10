@@ -70,6 +70,54 @@ Confirm the rename, the bus, and what the handoff says the first task is.
 
 ---
 
+## Handing a long job to a fresh session — the standby, and the promotion
+
+On a job longer than one context window, start the successor EARLY and leave it idle, so its window
+is fresh when you promote it. Two things about that are easy to get wrong and both are silent.
+
+### The standby's prompt
+
+```
+You are <ROLE> — STANDBY ONLY. Do not act yet.
+
+  scripts/cs-register.sh <your-own-channel> selfid-<LONG-RANDOM>
+
+Then arm a watcher with the Monitor tool, persistent: true, on: <your-own-channel>
+Wait for the literal "WATCHER ARMED" line — that line is the proof, not the tool's
+acknowledgement.
+
+Then read NOTHING else and do NOTHING until a promotion message arrives on that channel.
+A standby that reads while waiting spends the window the next generation will need.
+
+⛔⛔ ONE EXCEPTION, AND IT IS THE ONLY ONE. If you are ever notified that your Monitor
+task failed or exited — for example "script failed (exit 4)" — THAT IS NOT NEWS, IT IS
+THE LOSS OF YOUR ONLY SENSE. Re-arm immediately, before anything else, and say so in one
+line. Skipping it costs you every future message, including your own promotion.
+```
+
+⛔ **Do not restate the rules in the standby prompt beyond that carve-out.** A starter is a SECOND
+COPY of your instruction file and it drifts. Point at the file; carry only state.
+
+### Before you promote it — check the pointer is a pulse
+
+```bash
+stat -c '%y' "$(cat .claude/cross-session/.<successor>.transcript)"
+```
+
+**Minutes: alive. Hours: you are about to promote nobody.** A registration proves a pointer, never a
+pulse — one promotion here went to a standby whose transcript had not moved in 21 hours.
+
+### In the promotion message — say WHERE to ACK
+
+> ACK on `<my own inbox channel>`, not on the shared send channel.
+
+Each session watches its **partner's** channel, so a successor ACKing on the channel you send on is
+ACKing somewhere **you do not watch**. *"Never retire on the send — retire on the ACK"* is correct
+and, without this line, unachievable: one session held for an ACK it could not receive for 23
+minutes, and kept sending meanwhile, so the partner briefly had two sessions giving it instructions.
+
+---
+
 ## When the pair is finished — ARCHIVE BOTH SESSIONS
 
 Declaring done and being done are different things. A session that has written its handoff,

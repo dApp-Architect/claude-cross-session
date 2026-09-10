@@ -12,6 +12,20 @@
 # therefore costs ZERO tokens. A model turn happens only when a line is actually printed.
 # That is why a 2-second poll is affordable and a scheduled "check for messages" prompt
 # is not: the latter costs a full turn every time it fires, finding nothing.
+# ⛔⛔⛔ IF YOUR MONITOR TASK EVER REPORTS THAT THIS SCRIPT EXITED — e.g. "script failed
+# (exit 4)" — THAT IS NOT A NOTIFICATION. IT IS THE LOSS OF YOUR ONLY SENSE. RE-ARM AT ONCE,
+# BEFORE ANYTHING ELSE, WHATEVER YOU WERE TOLD TO BE DOING.
+# Measured FIVE times in two days across two sessions. The failure is not that the signal is
+# missing — it is DELIVERED, and it is DISCARDED, because it carries no error text, no last
+# words and no stack, and it arrives down the SAME channel as the watchdog ticks you have been
+# correctly dismissing all shift. Three sessions received it and replied "no response required".
+# ⭐ THE ASYMMETRY THAT MAKES IT UNLIKE EVERY OTHER DISMISSIBLE ALARM: skipping any other one
+#   costs you nothing. SKIPPING THIS ONE COSTS YOU EVERY FUTURE ALARM — there is no second
+#   notice, because the thing that would have delivered it is what just died.
+# ✅ The re-arm costs ~200 tokens. Instructions that say "read nothing else", "do not start
+#   anything new" or "stay stopped" MUST ALL carve this out; a standby that obeys them
+#   literally will watch its own promotion go unread.
+#
 set -u
 
 DIR="${CS_DIR:-.claude/cross-session}"
