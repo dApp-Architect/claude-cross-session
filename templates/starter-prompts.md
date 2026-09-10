@@ -107,6 +107,29 @@ stat -c '%y' "$(cat .claude/cross-session/.<successor>.transcript)"
 **Minutes: alive. Hours: you are about to promote nobody.** A registration proves a pointer, never a
 pulse — one promotion here went to a standby whose transcript had not moved in 21 hours.
 
+### If it does not ACK — wake it, do not write it off
+
+A standby that has gone deaf is usually still **running**. Direct-message it in its own window
+(`send_message` / SendMessage by full session id); that reaches a session the bus cannot.
+**Only ask the human to start a new one if the direct wake also fails.**
+
+```
+⛔⛔ YOU ARE THE SUCCESSOR AND YOU ARE PROMOTED. Your watcher is dead — that is why
+this is arriving in your window instead of on the bus.
+
+RE-ARM FIRST, BEFORE READING ANYTHING. You are deaf until you do:
+  scripts/cs-register.sh <your-own-channel> selfid-<LONG-RANDOM>
+  then arm the watcher (Monitor tool, persistent:true) on <your-own-channel>
+
+Then read these, from disk — you were never notified of them:
+  .claude/cross-session/<your-channel>_0001.md   (and any later ones)
+
+ACK on <predecessor's own inbox channel> when you are up.
+```
+
+⚠️ **Check the session id is the successor's and not your own.** A wake aimed at yourself does
+nothing and looks exactly like a successor that will not answer.
+
 ### In the promotion message — say WHERE to ACK
 
 > ACK on `<my own inbox channel>`, not on the shared send channel.

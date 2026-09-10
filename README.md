@@ -275,6 +275,41 @@ stat -c '%y' "$(cat .claude/cross-session/.<successor>.transcript)"
 read nothing writes no turns, so silence is normal for it and tells you nothing either way — which
 is exactly why the age, and then the ACK, are the only tests.
 
+### 1b. If the successor does not answer, WAKE IT — do not conclude there is nobody
+
+This is the rung everyone skips, and skipping it stops the work for no reason.
+
+**A session whose watcher has died cannot see anything you write to the bus.** A second bus message
+is not a louder message, it is the same silence. But the session is usually still *running* — it has
+simply gone deaf. **Claude Code can deliver a message straight into another session's window**
+(`send_message` / SendMessage, by full session id). That reaches a session the bus cannot.
+
+**The ladder, in order — do not skip a rung:**
+
+1. **The bus.** Send the promotion, wait a few minutes.
+2. **Prove it is alive before blaming it** — transcript age (above), and `isRunning` if your
+   environment exposes a session list. *A pointer is not a pulse.*
+3. **Direct-message it in its own window.** This is the only thing that reaches a session which is
+   not reading the bus.
+4. **Only then ask the human to start a new one** — and only if the direct wake also failed.
+
+**The wake message must say what it is.** A woken session has no idea why it woke, and a vague nudge
+reads as noise. Carry, in this order:
+
+- **"You are the successor and you are promoted"** — first line, not buried;
+- **"Re-arm first, then read"**, with the exact register and watch commands — *it is deaf until it
+  does, so reading first wastes the wake*;
+- **the filenames of the messages waiting on its channel** — it cannot be notified of them;
+- **where to ACK** (see the next rule).
+
+⚠️ **Check the id belongs to the successor and not to you.** A wake aimed at your own session does
+nothing and looks exactly like a successor that will not answer — the same silent family as
+registering the channel you only read.
+
+> This is not theory: it is how one session here was rescued after its watcher died and two
+> promotions sat unread. The documentation at the time said to go and wake the human. The human was
+> never needed.
+
 ### 2. Route the ACK, or the retiring session cannot hear it.
 
 The rule everyone writes down is *"never retire on the send — retire on the ACK."* It is correct,
