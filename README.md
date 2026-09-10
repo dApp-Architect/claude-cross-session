@@ -38,10 +38,19 @@ The message body is printed **inline**, so it arrives inside the notification an
 
 ## Install
 
-**The fast path: [ask Claude Code to install it](INSTALL.md).** You already have an agent with file
-access — clone this repo anywhere, point your session at it, and paste the prompt. It asks for your
-two role names, copies the scripts in, wires up your `CLAUDE.md`, and finishes by running the
-self-test so you end with `11 passed, 0 failed` rather than a claim that it worked.
+**The fast path: [ask Claude Code to install it](INSTALL.md).**
+
+```bash
+cd your-project
+git clone https://github.com/dApp-Architect/claude-cross-session.git
+```
+
+Then open Claude Code in `your-project` and paste [the prompt](INSTALL.md#the-prompt). It asks for
+your two role names, copies the scripts in, wires up your `CLAUDE.md`, runs the self-test, and
+deletes the clone afterwards.
+
+Clone it **inside** your project: a session can read its own project folder and nothing else unless
+you grant it another directory, so a copy in `~/Downloads` is invisible to it until you do.
 
 ### Or do it by hand
 

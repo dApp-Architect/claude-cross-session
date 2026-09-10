@@ -2,13 +2,36 @@
 
 You already have an agent with file access. Use it.
 
-1. Clone or download this repo **anywhere** — it does not need to live inside your project.
-2. Open Claude Code in **your own project**, and give it read access to wherever you put this repo.
-3. Paste the prompt below.
+### The short version
 
-It asks you two questions, copies five scripts in, wires up your `CLAUDE.md`, and finishes by running
-the self-test and showing you the result — so you end with `11 passed, 0 failed` rather than a claim
-that it worked.
+```bash
+cd your-project
+git clone https://github.com/dApp-Architect/claude-cross-session.git
+```
+
+Then open Claude Code **in `your-project`** and paste [the prompt](#the-prompt).
+
+That is all. The prompt copies the five scripts into `./scripts/`, wires up your `CLAUDE.md`, runs
+the self-test, and then **deletes the cloned folder** so you are not left with a second repository
+inside yours.
+
+### Why inside your project, and not somewhere else
+
+A Claude Code session can read **its own project folder** and nothing else, unless you explicitly
+grant it another directory. Cloning this repo somewhere like `~/Downloads` and telling your session
+to "go and read it" therefore fails until you have granted that folder — an extra step, and one
+most people will not know is missing when it silently cannot see the files.
+
+Cloning it **inside** the project removes that step: everything the agent needs is already in scope.
+
+> **Already have it checked out elsewhere and know how to grant a directory?** Then do that instead,
+> and replace the path at the top of the prompt. Nothing else changes — the prompt does not care
+> where the kit lives, only that it can read it.
+
+### What you end up with
+
+Five scripts in `./scripts/`, a `.claude/cross-session/` folder, a marked block appended to your
+`CLAUDE.md`, and `11 passed, 0 failed` on screen — rather than a claim that it worked.
 
 Manual steps are in the [README](README.md#install) if you would rather do it yourself.
 
@@ -18,7 +41,7 @@ Manual steps are in the [README](README.md#install) if you would rather do it yo
 
 ```text
 Install the claude-cross-session message bus into THIS project. The kit is at:
-<PATH TO THE CLONED REPO>
+./claude-cross-session      (change this if you cloned it somewhere else)
 
 Read that folder first — its README explains what each script does and the hazards.
 Then do the following, and stop and ask me if any step is ambiguous.
@@ -48,11 +71,14 @@ THEN:
     If I have no CLAUDE.md, create one containing only that block.
   - Do NOT modify any other file, and do NOT touch anything outside this project.
 
-FINALLY, AND DO NOT SKIP THIS:
-  - Run scripts/cs-selftest.sh and paste the output verbatim.
-    It ends with "N passed, M failed". If anything failed, tell me plainly what
-    broke rather than summarising it as fine.
-  - Then tell me, in a short list: every file you created, every file you changed,
+FINALLY, IN THIS ORDER, AND DO NOT SKIP ANY OF IT:
+  1. Run scripts/cs-selftest.sh and paste the output verbatim.
+     It ends with "N passed, M failed". If anything failed, tell me plainly what
+     broke rather than summarising it as fine.
+  2. ONLY IF IT PASSED: delete the cloned kit folder, so I am not left with a second
+     git repository inside mine.
+     ⛔ If anything failed, LEAVE THE FOLDER IN PLACE so I can read it, and say so.
+  3. Then tell me, in a short list: every file you created, every file you changed,
     the two role names, and the exact register + watch commands each of my two
     sessions must run — the watcher must be armed with the Monitor tool and
     persistent: true, never as a plain background job.
