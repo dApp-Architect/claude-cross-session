@@ -4,6 +4,8 @@
 
 Five small shell scripts — two for the bus itself, three for the watchdog, context measurement and self-test. No daemon, no server, no dependencies beyond `bash` and coreutils — except `cs-context.sh`, which needs `python3` to parse the transcript JSON. The bus itself does not.
 
+→ **[Install it by asking Claude Code to do it](INSTALL.md)** — one prompt, no manual steps.
+
 ---
 
 ## Why this exists
@@ -35,6 +37,13 @@ The message body is printed **inline**, so it arrives inside the notification an
 ---
 
 ## Install
+
+**The fast path: [ask Claude Code to install it](INSTALL.md).** You already have an agent with file
+access — clone this repo anywhere, point your session at it, and paste the prompt. It asks for your
+two role names, copies the scripts in, wires up your `CLAUDE.md`, and finishes by running the
+self-test so you end with `11 passed, 0 failed` rather than a claim that it worked.
+
+### Or do it by hand
 
 Copy `scripts/` into your project and make them executable:
 
